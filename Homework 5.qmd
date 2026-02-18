@@ -5,23 +5,160 @@ format: pdf
 editor: visual
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+## Install Packages
 
 ```{r}
-1 + 1
+#install.packages("class")
+#install.packages("boot")
+#install.packages("ISLR2")
+#install.packages("tidyverse")
+library(class)
+library(boot)
+library(ISLR2)
+library(tidyverse)
 ```
 
-You can add options to executable code like this
+## Part 1: Predicting a Grade
+
+Subsection C:
 
 ```{r}
-#| echo: false
-2 * 2
+x <- c(90, 88, 83, 78, 85, 84)
+g <- factor(c("A", "A", "A", "B", "B", "B"))
+pred <- knn.cv(train = data.frame(x), cl = g, k = 3)
+pred
+
+
+mean(pred != g)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+## Part 2: Excersize 5.4.8
+
+Subsection A
+
+```{r}
+y <- x - 2*x^2 + rnorm(100)
+
+
+set.seed(1)
+x <- rnorm(100)
+y <- x - 2*x^2 + rnorm(100)
+sim.df <- data.frame(x, y)
+
+plot(x, y, pch = 19)
+```
+
+Note that the first line of code can be rewritten as
+
+$$
+Y=X-2X^2 + \varepsilon , \varepsilon\sim~  N(0,1)
+$$
+
+n is the 00 observation, while p is the one predictor (x)
+
+The plot is nonlinear , dominated by the quadratic term, with a downward opening parabola with noise
+
+Subsection B
+
+```{r}
+
+set.seed(1)
+x <- rnorm(100)
+y <- x - 2*x^2 + rnorm(100)
+sim.df <- data.frame(x, y)
+
+#Model 1: linear
+glm1 <- glm(y ~ x, data = sim.df)
+set.seed(12)
+cv1 <- cv.glm(sim.df, glm1)$delta[1]
+
+
+# Model 2: quadratic
+glm2 <- glm(y ~ x + I(x^2), data = sim.df)
+set.seed(12)
+cv2 <- cv.glm(sim.df, glm2)$delta[1]
+
+
+# Model 3: cubic
+glm3 <- glm(y ~ x + I(x^2) + I(x^3), data = sim.df)
+set.seed(12)
+cv3 <- cv.glm(sim.df, glm3)$delta[1]
+
+
+# Model 4: quartic
+glm4 <- glm(y ~ x + I(x^2) + I(x^3) + I(x^4), data = sim.df)
+set.seed(12)
+cv4 <- cv.glm(sim.df, glm4)$delta[1]
+
+cv1; cv2; cv3; cv4
+```
+
+Subsection C
+
+The quadratic model ( Model 2) has the smallest LOOCV Error, as the tru model is quadratic
+
+Subsection D
+
+```{r}
+
+
+set.seed(1)
+x <- rnorm(100)
+y <- x - 2*x^2 + rnorm(100)
+sim.df <- data.frame(x, y)
+
+# 10-fold CV
+set.seed(12)
+cv1_10 <- cv.glm(sim.df, glm1, K = 10)$delta[1]
+
+set.seed(12)
+cv2_10 <- cv.glm(sim.df, glm2, K = 10)$delta[1]
+
+set.seed(12)
+cv3_10 <- cv.glm(sim.df, glm3, K = 10)$delta[1]
+
+set.seed(12)
+cv4_10 <- cv.glm(sim.df, glm4, K = 10)$delta[1]
+
+cv1_10; cv2_10; cv3_10; cv4_10
+```
+
+Subsection E
+
+LOOCV has no randomness when splitting the data, as it only leaves out one point, whereas the 10 fold CV involves splitting data RANDOMLY into 10 sets
+
+## Part 3: Excersize 5.4.5
+
+Initial Code
+
+```{r}
+set.seed(123)
+df <- Default
+
+
+df <- df %>% mutate(default_num = if_else(default == "Yes", 1, 0))
+```
+
+Subsection A
+
+```{r}
+set.seed(123)
+train_idx <- sample(seq_len(nrow(df)), size = 0.6 * nrow(df))
+train <- df[train_idx, ]
+test  <- df[-train_idx, ]
+
+fit_full <- glm(default ~ income + balance + student,
+                data = train, family = binomial)
+
+probs <- predict(fit_full, newdata = test, type = "response")
+preds <- if_else(probs > 0.5, "Yes", "No")
+mean(preds != test$default)   
+
+
+fit_reduced <- glm(default ~ income + balance,
+                   data = train, family = binomial)
+
+probs2 <- predict(fit_reduced, newdata = test, type = "response")
+preds2 <- if_else(probs2 > 0.5, "Yes", "No")
+mean(preds2 != test$default)
+```
